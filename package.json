@@ -1,0 +1,13 @@
+{
+  "name": "em-ai-survey-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Anonymous AI usage survey for engineering managers",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
