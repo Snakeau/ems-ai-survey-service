@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Survey Results</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Survey Results</h1>
+      <p class="subtitle" id="meta">Loading…</p>
+
+      <section>
+        <h2>Submissions</h2>
+        <div style="overflow:auto;">
+          <table id="resultsTable" style="width:100%; border-collapse: collapse; font-size: 14px;"></table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Raw JSON</h2>
+        <pre id="raw" style="white-space: pre-wrap; border:1px solid #e5e7eb; border-radius:8px; padding:12px; background:#f9fafb;"></pre>
+      </section>
+    </main>
+
+    <script>
+      const key = window.location.pathname.split('/').filter(Boolean).pop();
+      const metaNode = document.getElementById('meta');
+      const tableNode = document.getElementById('resultsTable');
+      const rawNode = document.getElementById('raw');
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#39;');
+      }
+
+      function formatAnswers(answers) {
+        if (!answers || typeof answers !== 'object') {
+          return '';
+        }
+
+        return Object.entries(answers)
+          .map(([name, value]) => {
+            if (Array.isArray(value)) {
+              return `<div><strong>${escapeHtml(name)}:</strong> ${escapeHtml(value.join(', '))}</div>`;
+            }
+
+            return `<div><strong>${escapeHtml(name)}:</strong> ${escapeHtml(value ?? '')}</div>`;
+          })
+          .join('');
+      }
+
+      async function loadResults() {
+        try {
+          const response = await fetch(`/api/results/${encodeURIComponent(key)}`);
+          if (!response.ok) {
+            throw new Error('Could not load results');
+          }
+
+          const data = await response.json();
+          const rows = data.submissions || [];
+
+          metaNode.textContent = `Total submissions: ${data.totalSubmissions}${data.lastSubmittedAt ? ` · Last: ${new Date(data.lastSubmittedAt).toLocaleString()}` : ''}`;
+
+          tableNode.innerHTML = `
+            <thead>
+              <tr>
+                <th style="text-align:left; border-bottom:1px solid #e5e7eb; padding:8px;">Submitted At</th>
+                <th style="text-align:left; border-bottom:1px solid #e5e7eb; padding:8px;">Answers</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((item) => `
+                <tr>
+                  <td style="vertical-align:top; border-bottom:1px solid #f3f4f6; padding:8px; white-space:nowrap;">${escapeHtml(item.submittedAt || '')}</td>
+                  <td style="vertical-align:top; border-bottom:1px solid #f3f4f6; padding:8px;">${formatAnswers(item.answers)}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="2" style="padding:8px;">No submissions yet.</td></tr>'}
+            </tbody>
+          `;
+
+          rawNode.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          metaNode.textContent = 'Could not load results.';
+          tableNode.innerHTML = '';
+          rawNode.textContent = '';
+        }
+      }
+
+      loadResults();
+    </script>
+  </body>
+</html>
